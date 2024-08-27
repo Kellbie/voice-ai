@@ -16,7 +16,6 @@ let conversationHistory = [];
 const weatherApiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // Replace with your API key
 const mapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your API key
 
-// Initialize voice assistant
 const initializeAssistant = () => {
     speak('Hello, I am Baymax, created solely for the purpose of help. How can I assist you today?');
     statusParagraph.textContent = "Listening for 'Baymax'...";
@@ -30,15 +29,17 @@ const speak = (text) => {
 
 const handleCommand = async (command) => {
     let responseText = "Sorry, I didn't understand that.";
-    
+
     if (command.toLowerCase().includes(NAME)) {
-        if (command.toLowerCase().includes('time')) {
+        if (command.toLowerCase().includes('hello') || command.toLowerCase().includes('hi') || command.toLowerCase().includes('how are you')) {
+            responseText = "Hello! I am Baymax. How can I assist you today?";
+        } else if (command.toLowerCase().includes('time')) {
             responseText = `The current time is ${new Date().toLocaleTimeString()}.`;
         } else if (command.toLowerCase().includes('date')) {
             responseText = `Today's date is ${new Date().toLocaleDateString()}.`;
         } else if (command.toLowerCase().includes('weather') || command.toLowerCase().includes('temperature')) {
             responseText = await getWeather();
-        } else if (command.toLowerCase().includes('distance')) {
+        } else if (command.toLowerCase().includes('distance') || command.toLowerCase().includes('travel time')) {
             responseText = await getDistance();
         } else if (command.toLowerCase().includes('save')) {
             saveConversation(command);
@@ -46,13 +47,12 @@ const handleCommand = async (command) => {
         } else if (command.toLowerCase().includes('suggestions')) {
             responseText = "I can suggest some topics or help with specific queries.";
         } else {
-            // Use a simple internet search for questions
             responseText = "I can handle specific commands like time, date, weather, or distance.";
         }
     } else {
         responseText = `If you’re trying to call me, my name is Baymax, created solely for the purpose of help.`;
     }
-    
+
     return responseText;
 };
 
@@ -86,7 +86,7 @@ const saveConversation = (command) => {
 
 const typeToNotepad = (text) => {
     if (typingEnabled) {
-        // Simulate typing into notepad
+        // Simulate typing into notepad (you can't directly access a phone's notepad via web technologies)
         console.log("Typing into notepad:", text);
     }
 };
