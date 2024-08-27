@@ -4,58 +4,86 @@
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const SpeechSynthesis = window.speechSynthesis;
 
-if (!SpeechRecognition) {
+if (!SpeechRecognition || !SpeechSynthesis) {
     alert("Sorry, your browser does not support the Web Speech API.");
 }
 
 const recognition = new SpeechRecognition();
 const synthesis = SpeechSynthesis;
-const startButton = document.getElementById('start-btn');
 const statusParagraph = document.getElementById('status');
 const responseParagraph = document.getElementById('response');
 
+const NAME = 'jarvis';
+
+// Configure recognition
 recognition.continuous = false;
 recognition.lang = 'en-US';
 recognition.interimResults = false;
 recognition.maxAlternatives = 1;
 
-startButton.addEventListener('click', () => {
-    if (synthesis.speaking) {
-        alert("Sorry, I'm currently speaking. Please wait.");
-        return;
-    }
+const getWeather = async () => {
+    const apiKey = '9aa30cf656c812535386bd4be91bd84b'; // Replace with your OpenWeatherMap API key
+    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=your_city&appid=${apiKey}&units=metric`);
+    const data = await response.json();
+    return `The current temperature in ${data.name} is ${data.main.temp}°C with ${data.weather[0].description}.`;
+};
 
-    startButton.disabled = true;
-    statusParagraph.textContent = "Listening...";
-    
-    recognition.start();
-});
-
-recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    statusParagraph.textContent = `You said: ${transcript}`;
-
+const handleCommand = async (command) => {
     let responseText = "Sorry, I didn't understand that.";
     
-    if (transcript.toLowerCase().includes("hello")) {
-        responseText = "Hello there! How can I assist you today?";
-    } else if (transcript.toLowerCase().includes("what's your name")) {
-        responseText = "I am your friendly voice assistant!";
+    if (command.toLowerCase().includes(NAME)) {
+        if (command.toLowerCase().includes('time')) {
+            responseText = `The current time is ${new Date().toLocaleTimeString()}.`;
+        } else if (command.toLowerCase().includes('date')) {
+            responseText = `Today's date is ${new Date().toLocaleDateString()}.`;
+        } else if (command.toLowerCase().includes('temperature')) {
+            responseText = await getWeather();
+        } else if (command.toLowerCase().includes('calculate')) {
+            try {
+                const expression = command.toLowerCase().replace('calculate', '').trim();
+                responseText = `The result is ${eval(expression)}.`;
+            } catch (e) {
+                responseText = "Sorry, there was an error with the calculation.";
+            }
+        } else {
+            // Use a simple internet search for questions
+            responseText = "I can only handle specific commands like time, date, temperature, or calculations.";
+        }
+    } else {
+        responseText = `You need to say '${NAME}' before your command.`;
     }
 
-    responseParagraph.textContent = responseText;
+    return responseText;
+};
 
-    const utterance = new SpeechSynthesisUtterance(responseText);
+const speak = (text) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = synthesis.getVoices().find(voice => voice.name === 'Google UK English Male') || synthesis.getVoices()[0];
     synthesis.speak(utterance);
-    
-    utterance.onend = () => {
-        startButton.disabled = false;
-        statusParagraph.textContent = "Click the button to start...";
-    };
+};
+
+const startListening = () => {
+    recognition.start();
+};
+
+recognition.onstart = () => {
+    statusParagraph.textContent = "Listening...";
+};
+
+recognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    statusParagraph.textContent = `You said: ${transcript}`;
+    const responseText = await handleCommand(transcript);
+    responseParagraph.textContent = responseText;
+    speak(responseText);
 };
 
 recognition.onerror = (event) => {
     console.error('Speech recognition error', event.error);
     statusParagraph.textContent = "There was an error. Please try again.";
-    startButton.disabled = false;
+};
+
+// Start listening as soon as the page loads
+window.onload = () => {
+    startListening();
 };
