@@ -40,7 +40,9 @@ recognition.onresult = (event) => {
     if (transcript.toLowerCase().includes("hello")) {
         responseText = "Hello there! How can I assist you today?";
     } else if (transcript.toLowerCase().includes("what's your name")) {
-        responseText = "I am your friendly voice assistant!";
+        responseText = "My name is baymax and I am your friendly voice assistant!";
+    } else if (transcript.toLowerCase().includes("what can you do")) {
+        responseText = "That depends on what you want me to do, i can do alot just name it and lets see";
     }
 
     responseParagraph.textContent = responseText;
