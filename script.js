@@ -1,31 +1,31 @@
 // script.js
 
-// Check if the browser supports the Web Speech API
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const SpeechSynthesis = window.speechSynthesis;
-
-if (!SpeechRecognition || !SpeechSynthesis) {
-    alert("Sorry, your browser does not support the Web Speech API.");
-}
-
 const recognition = new SpeechRecognition();
 const synthesis = SpeechSynthesis;
+
 const statusParagraph = document.getElementById('status');
 const responseParagraph = document.getElementById('response');
+const startNotepadButton = document.getElementById('start-notepad');
+const stopNotepadButton = document.getElementById('stop-notepad');
 
-const NAME = 'jarvis';
+const NAME = 'baymax';
+let typingEnabled = false;
+let conversationHistory = [];
+const weatherApiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // Replace with your API key
+const mapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your API key
 
-// Configure recognition
-recognition.continuous = false;
-recognition.lang = 'en-US';
-recognition.interimResults = false;
-recognition.maxAlternatives = 1;
+// Initialize voice assistant
+const initializeAssistant = () => {
+    speak('Hello, I am Baymax, created solely for the purpose of help. How can I assist you today?');
+    statusParagraph.textContent = "Listening for 'Baymax'...";
+};
 
-const getWeather = async () => {
-    const apiKey = '9aa30cf656c812535386bd4be91bd84b'; // Replace with your OpenWeatherMap API key
-    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=your_city&appid=${apiKey}&units=metric`);
-    const data = await response.json();
-    return `The current temperature in ${data.name} is ${data.main.temp}°C with ${data.weather[0].description}.`;
+const speak = (text) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = synthesis.getVoices().find(voice => voice.name === 'Google UK English Male') || synthesis.getVoices()[0];
+    synthesis.speak(utterance);
 };
 
 const handleCommand = async (command) => {
@@ -36,35 +36,68 @@ const handleCommand = async (command) => {
             responseText = `The current time is ${new Date().toLocaleTimeString()}.`;
         } else if (command.toLowerCase().includes('date')) {
             responseText = `Today's date is ${new Date().toLocaleDateString()}.`;
-        } else if (command.toLowerCase().includes('temperature')) {
+        } else if (command.toLowerCase().includes('weather') || command.toLowerCase().includes('temperature')) {
             responseText = await getWeather();
-        } else if (command.toLowerCase().includes('calculate')) {
-            try {
-                const expression = command.toLowerCase().replace('calculate', '').trim();
-                responseText = `The result is ${eval(expression)}.`;
-            } catch (e) {
-                responseText = "Sorry, there was an error with the calculation.";
-            }
+        } else if (command.toLowerCase().includes('distance')) {
+            responseText = await getDistance();
+        } else if (command.toLowerCase().includes('save')) {
+            saveConversation(command);
+            responseText = "Saving your conversation.";
+        } else if (command.toLowerCase().includes('suggestions')) {
+            responseText = "I can suggest some topics or help with specific queries.";
         } else {
             // Use a simple internet search for questions
-            responseText = "I can only handle specific commands like time, date, temperature, or calculations.";
+            responseText = "I can handle specific commands like time, date, weather, or distance.";
         }
     } else {
-        responseText = `You need to say '${NAME}' before your command.`;
+        responseText = `If you’re trying to call me, my name is Baymax, created solely for the purpose of help.`;
     }
-
+    
     return responseText;
 };
 
-const speak = (text) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = synthesis.getVoices().find(voice => voice.name === 'Google UK English Male') || synthesis.getVoices()[0];
-    synthesis.speak(utterance);
+const getWeather = async () => {
+    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=your_city&appid=${weatherApiKey}&units=metric`);
+    const data = await response.json();
+    return `The current temperature in ${data.name} is ${data.main.temp}°C with ${data.weather[0].description}.`;
+};
+
+const getDistance = async () => {
+    if (!navigator.geolocation) {
+        return "Geolocation is not supported by this browser.";
+    }
+
+    return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const destination = prompt('Enter the destination address:');
+            const response = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=${lat},${lon}&destinations=${destination}&key=${mapsApiKey}`);
+            const data = await response.json();
+            const distance = data.rows[0].elements[0].distance.text;
+            resolve(`The distance to ${destination} is ${distance}.`);
+        });
+    });
+};
+
+const saveConversation = (command) => {
+    conversationHistory.push(command);
+};
+
+const typeToNotepad = (text) => {
+    if (typingEnabled) {
+        // Simulate typing into notepad
+        console.log("Typing into notepad:", text);
+    }
 };
 
 const startListening = () => {
     recognition.start();
 };
+
+recognition.continuous = true;
+recognition.lang = 'en-US';
+recognition.interimResults = false;
 
 recognition.onstart = () => {
     statusParagraph.textContent = "Listening...";
@@ -76,6 +109,7 @@ recognition.onresult = async (event) => {
     const responseText = await handleCommand(transcript);
     responseParagraph.textContent = responseText;
     speak(responseText);
+    typeToNotepad(transcript);
 };
 
 recognition.onerror = (event) => {
@@ -83,7 +117,20 @@ recognition.onerror = (event) => {
     statusParagraph.textContent = "There was an error. Please try again.";
 };
 
-// Start listening as soon as the page loads
+startNotepadButton.addEventListener('click', () => {
+    typingEnabled = true;
+    startNotepadButton.disabled = true;
+    stopNotepadButton.disabled = false;
+});
+
+stopNotepadButton.addEventListener('click', () => {
+    typingEnabled = false;
+    startNotepadButton.disabled = false;
+    stopNotepadButton.disabled = true;
+});
+
+// Initialize the assistant when the page loads
 window.onload = () => {
+    initializeAssistant();
     startListening();
 };
